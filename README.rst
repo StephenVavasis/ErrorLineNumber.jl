@@ -10,7 +10,10 @@ file has a function ``reduceMatrix`` that generates an ``BoundsError``
 due to an array subscript out of range.  Suppose you suspect that Julia 
 displays the wrong line number for the error.  This
 package instruments a source file with a second scheme for
-tracking line numbers.  To use it, first install the package
+tracking line numbers.  To use it, first install the package via::
+
+    Pkg.clone("https://github.com/StephenVavasis/ErrorLineNumber.jl")
+   
 and then declare::
 
    using ErrorLineNumber.@errorlinenumber

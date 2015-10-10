@@ -10,19 +10,20 @@ module ErrorLineNumber
 ## There are three versions of routine; the correct one is
 ## selected by multiple dispatch on the first argument.
 
-function insert_line_numbers(inprogram::LineNumberNode,
+
+insert_line_numbers(inprogram::Any,
+                             ::ASCIIString,
+                             ::Symbol) = inprogram
+
+
+insert_line_numbers(inprogram::LineNumberNode,
                              fnname::ASCIIString,
-                             specialsym::Symbol)
+                             specialsym::Symbol) = 
     Expr(:block,
          Expr(:(=), specialsym, fnname * "." * string(inprogram.line)),
          inprogram)
-end
 
-function insert_line_numbers(inprogram::Any,
-                             ::ASCIIString,
-                             ::Symbol)
-    inprogram
-end
+
 
 
 
@@ -50,31 +51,24 @@ end
 
 macro errorlinenumber(fn)
     fn.head != :function && error("errorlinenumber macro only available for functions")
-    newfn = Expr(:function)
     @assert fn.args[1].head == :call
-    fnname = fn.args[1].args[1]
-    push!(newfn.args, fn.args[1])
     @assert fn.args[2].head == :block
-    block1 = Expr(:block)
+    fnname = fn.args[1].args[1]
     g = gensym()
-    push!(block1.args, :($g = ""))
-    tryexpr = Expr(:try)
-    push!(tryexpr.args, insert_line_numbers(fn.args[2], string(fnname), g))
     g2 = gensym()
-    push!(tryexpr.args, g2)
-    block2 = Expr(:block)
-    push!(block2.args, :(println(STDERR, "    !!!!!!!!!!!!!!!!!")))
-    push!(block2.args, :(println(STDERR, "ERROR LINE number = ", $g)))
-    push!(block2.args, :(println(STDERR, "    !!!!!!!!!!!!!!!!!")))
-    push!(block2.args, :(rethrow($g2)))
-    push!(tryexpr.args, block2)
-    push!(block1.args, tryexpr)
-    push!(newfn.args, block1)
+    newfn = Expr(:function,
+                 fn.args[1],
+                 Expr(:block,
+                      :($g = ""),
+                      Expr(:try,
+                           insert_line_numbers(fn.args[2], string(fnname), g),
+                           g2,
+                           Expr(:block,
+                                :(println(STDERR, "    !!!!!!!!!!!!!!!!!")),
+                                :(println(STDERR, "ERROR LINE number = ", $g)),
+                                :(println(STDERR, "    !!!!!!!!!!!!!!!!!")),
+                                :(rethrow($g2))))))
     esc(newfn)
 end
-
-
-
-
 
 end # module
